@@ -539,7 +539,7 @@ type
     SciterDataReady: function(hwnd: HWINDOW; uri: PWideChar; data: PByte; dataLength: UINT): BOOL; stdcall;
     SciterDataReadyAsync: function(hwnd: HWINDOW; uri: PWideChar; data: PByte; dataLength: UINT; requestId: LPVOID): BOOL; stdcall;
     SciterProc: function(hwnd: HWINDOW; msg: Cardinal; wParam: Integer; lParam: Integer): LRESULT; stdcall;
-    SciterProcND: function(hwnd: HWINDOW; msg: Cardinal; wParam: Integer; lParam: Integer; var pbHANDLED: Integer): LRESULT; stdcall;
+    SciterProcND: function(hwnd: HWINDOW; msg: Cardinal; wParam: Integer; lParam: Integer; var pbHANDLED: BOOL): LRESULT; stdcall;
     SciterLoadFile: function(hWndSciter: HWINDOW; filename:LPCWSTR): BOOL; stdcall;
     SciterLoadHtml: function(hWndSciter: HWINDOW; html: PByte; htmlSize: UINT; baseUrl: PWideChar): BOOL; stdcall;
     SciterSetCallback: procedure(hWndSciter: HWINDOW; cb: LPSciterHostCallback; cbParam: Pointer); stdcall;
@@ -557,7 +557,6 @@ type
     SciterSetOption: function(hwnd: HWINDOW; option: SCITER_RT_OPTIONS; value: UINT_PTR): BOOL; stdcall;
     SciterGetPPI: procedure(hWndSciter: HWINDOW; var px: UINT; var py: UINT); stdcall;
     SciterGetViewExpando: function( hwnd: HWINDOW; pval: PSciterValue ): BOOL; stdcall;
-    SciterEnumUrlData: Pointer;  // TODO:
     SciterRenderD2D: TProcPointer;
     SciterD2DFactory: TProcPointer;
     SciterDWFactory: TProcPointer;
@@ -565,10 +564,6 @@ type
     SciterSetHomeURL: function(hWndSciter: HWINDOW; baseUrl: PWideChar): BOOL; stdcall;
     SciterCreateWindow: function( creationFlags: UINT; var frame: TRect; delegate: PSciterWindowDelegate; delegateParam: LPVOID; parent: HWINDOW): HWINDOW; stdcall;
     SciterSetupDebugOutput: procedure(hwndOrNull: HWINDOW; param: Pointer; pfOutput: PDEBUG_OUTPUT_PROC); stdcall;
-    SciterDebugSetupClient: TProcPointer;
-    SciterDebugAddBreakpoint: TProcPointer;
-    SciterDebugRemoveBreakpoint: TProcPointer;
-    SciterDebugEnumBreakpoints: TProcPointer;
 
 //|
 //| DOM Element API
@@ -952,8 +947,6 @@ type
   ESciterNotImplementedException = class(ESciterException)
   end;
 
-function _SciterAPI: PSciterApi; stdcall;
-
 { Conversion functions. Mnemonics are: T - tiscript_value, S - TSciterValue, V - VARIANT }
 function  S2V(Value: PSciterValue; var OleValue: OleVariant): UINT;
 function  V2S(const Value: OleVariant; SciterValue: PSciterValue): UINT;
@@ -1228,7 +1221,11 @@ var
 begin
   if FAPI = nil then
   begin
+    {$IFDEF CPUX64}
+    HSCITER := LoadLibrary('sciter64.dll');
+    {$ELSE}
     HSCITER := LoadLibrary('sciter32.dll');
+    {$ENDIF CPUX64}
     if HSCITER = 0 then
       raise ESciterException.Create('Failed to load Sciter DLL.');
 
@@ -1240,9 +1237,6 @@ begin
   end;
   Result := FAPI;
 end;
-
-
-function _SciterAPI: PSciterApi; external 'sciter32.dll' name 'SciterAPI'; stdcall;
 
 { SciterValue to Variant conversion }
 function S2V(Value: PSciterValue; var OleValue: OleVariant): UINT;
@@ -1285,7 +1279,7 @@ begin
       end;
     T_BOOL:
       begin
-        Result := FAPI.ValueIntData(Value, iResult);
+        Result := API.ValueIntData(Value, iResult);
         if Result = HV_OK then
         begin
           OleValue := iResult <> 0;
@@ -1302,13 +1296,13 @@ begin
     T_CURRENCY:
       begin
         // TODO: ?
-        Result := FAPI.ValueInt64Data(Value, i64Result);
+        Result := API.ValueInt64Data(Value, i64Result);
         cResult := PCurrency(@i64Result)^;
         OleValue := cResult;
       end;
     T_DATE:
       begin
-        Result := FAPI.ValueInt64Data(Value, i64Result);
+        Result := API.ValueInt64Data(Value, i64Result);
         ft := TFileTime(i64Result);
         FileTimeToSystemTime(ft, st);
         SystemTimeToVariantTime(st, dResult);
@@ -1340,7 +1334,7 @@ begin
       end;
     T_INT:
       begin
-        Result := FAPI.ValueIntData(Value, iResult);
+        Result := API.ValueIntData(Value, iResult);
         OleValue := iResult;
       end;
     T_LENGTH:
@@ -1412,7 +1406,7 @@ var
   oArrItem: Variant;
   sArrItem: TSciterValue;
 begin
-  FAPI.ValueInit(SciterValue);
+  API.ValueInit(SciterValue);
   vt := VarType(Value);
 
   if (vt and varArray) = varArray then
@@ -1441,12 +1435,12 @@ begin
     varString:
       begin
         sWStr := Value;
-        Result:= FAPI.ValueStringDataSet(SciterValue, PWideChar(sWStr), Length(sWStr), 0);
+        Result:= API.ValueStringDataSet(SciterValue, PWideChar(sWStr), Length(sWStr), 0);
       end;
     varOleStr:
       begin
         sWStr := Value;
-        Result:= FAPI.ValueStringDataSet(SciterValue, PWideChar(sWStr), Length(sWStr), 0);
+        Result:= API.ValueStringDataSet(SciterValue, PWideChar(sWStr), Length(sWStr), 0);
       end;
     varBoolean:
       begin
@@ -1461,23 +1455,23 @@ begin
     varWord,
     varLongWord:
       begin
-        Result := FAPI.ValueIntDataSet(SciterValue, Integer(Value), T_INT, 0);
+        Result := API.ValueIntDataSet(SciterValue, Integer(Value), T_INT, 0);
       end;
     varInt64:
       begin
         i64 := Value;
-        Result := FAPI.ValueInt64DataSet(SciterValue, i64, T_INT, 0);
+        Result := API.ValueInt64DataSet(SciterValue, i64, T_INT, 0);
       end;
     varSingle,
     varDouble:
       begin
-        Result := FAPI.ValueFloatDataSet(SciterValue, Double(Value), T_FLOAT, 0);
+        Result := API.ValueFloatDataSet(SciterValue, Double(Value), T_FLOAT, 0);
       end;
     varCurrency:
       begin
         cCur := Value;
         i64 := PInt64(@cCur)^;
-        Result := FAPI.ValueInt64DataSet(SciterValue, i64, T_CURRENCY, 0);
+        Result := API.ValueInt64DataSet(SciterValue, i64, T_CURRENCY, 0);
       end;
     varDate:
       begin
@@ -1486,13 +1480,13 @@ begin
         VariantTimeToSystemTime(d, st);
         SystemTimeToFileTime(st, ft);
         i64 := Int64(ft);
-        Result := FAPI.ValueInt64DataSet(SciterValue, i64, T_DATE, 0);
+        Result := API.ValueInt64DataSet(SciterValue, i64, T_DATE, 0);
       end;
     varDispatch:
       begin
         pDisp := IDispatch(Value);
         //pDisp._AddRef;
-        Result := FAPI.ValueBinaryDataSet(SciterValue, PByte(pDisp), 1, T_OBJECT, 0);
+        Result := API.ValueBinaryDataSet(SciterValue, PByte(pDisp), 1, T_OBJECT, 0);
       end;
     else
       begin

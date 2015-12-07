@@ -4,7 +4,7 @@ Sciter component for Delphi
 *** SUPPORTED VERSIONS AND PLATFORMS ***
 Delphi 7 or newer, 32-bit platform 
 
-*** ACTUAL SCITER VERSION: 3.2.0.3 ***
+*** ACTUAL SCITER VERSION: 3.3.0.7 ***
 
 *** INSTALLATION ***
 1. Open project group file (.bpg or .groupproj) in Delphi IDE

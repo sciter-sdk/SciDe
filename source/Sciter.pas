@@ -286,6 +286,7 @@ type
   TSciterOnDataLoaded = procedure(ASender: TObject; const url: WideString; resType: SciterResourceType;
                                                     data: PByte; dataLength: Integer; status: Integer;
                                                     requestId: Integer) of object;
+  TSciterOnFocus = procedure(ASender: TObject) of object;
 
   TSciterOnDocumentCompleteEventArgs = class
   private
@@ -756,6 +757,7 @@ type
     FHomeURL: WideString;
     FHtml: WideString;
     FManagedElements: TElementList;
+    FOnFocus: TSciterOnFocus;
     FOnDataLoaded: TSciterOnDataLoaded;
     FOnDocumentComplete: TSciterOnDocumentComplete;
     FOnEngineDestroyed: TNotifyEvent;
@@ -903,6 +905,7 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property OnFocus: TSciterOnFocus read FOnFocus write FOnFocus;
     property OnDataLoaded: TSciterOnDataLoaded read FOnDataLoaded write FOnDataLoaded;
     property OnDocumentComplete: TSciterOnDocumentComplete read FOnDocumentComplete write FOnDocumentComplete;
     property OnEngineDestroyed: TNotifyEvent read FOnEngineDestroyed write FOnEngineDestroyed;
@@ -1427,7 +1430,7 @@ end;
 
 procedure TSciter.DestroyWnd;
 var
-  pbHandled: Integer;
+  pbHandled: BOOL;
 begin
   API.SciterSetCallback(Handle, nil, nil);
   API.SciterWindowAttachEventHandler(Handle, nil, nil, UINT(HANDLE_ALL));
@@ -1674,7 +1677,7 @@ end;
 
 function TSciter.HandleDocumentComplete(const Url: WideString): BOOL;
 var
-  bHandled: Integer;
+  bHandled: BOOL;
   pArgs: TSciterOnDocumentCompleteEventArgs;
 begin
   Result := False;
@@ -2365,7 +2368,7 @@ end;
 procedure TSciter.WndProc(var Message: TMessage);
 var
   llResult: LRESULT;
-  bHandled: Integer;
+  bHandled: BOOL;
   M: PMsg;
 begin
   if not DesignMode then
@@ -2373,6 +2376,11 @@ begin
     if HandleAllocated then
     begin
       case Message.Msg of
+        WM_SETFOCUS:
+          begin
+            if Assigned(FOnFocus) then
+              FOnFocus(Self);
+          end;
         WM_GETDLGCODE:
           // Tweaking arrow keys and TAB handling (VCL-specific)
           begin
@@ -2399,7 +2407,7 @@ begin
       end;
 
       llResult := API.SciterProcND(Handle, Message.Msg, Message.WParam, Message.LParam, bHandled);
-      if bHandled <> 0 then
+      if bHandled then
       begin
         Message.Result := llResult;
       end
