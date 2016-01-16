@@ -75,7 +75,7 @@ type
   LPCBYTE_RECEIVER = procedure(bytes: PByte; num_bytes: UINT; param: Pointer); stdcall;
   PLPCBYTE_RECEIVER = ^LPCBYTE_RECEIVER;
 
-  SCITER_CALLBACK_NOTIFICATION = packed record
+  SCITER_CALLBACK_NOTIFICATION = record
     code: UINT;
     hwnd: HWINDOW;
   end;
@@ -119,7 +119,7 @@ type
    SCITER_RT_OPTIONS_DUMMY = MAXINT
   );
 
-  SCN_LOAD_DATA = packed record
+  SCN_LOAD_DATA = record
              code: UINT;
              hwnd: HWINDOW;
               uri: LPCWSTR;
@@ -133,7 +133,7 @@ type
   LPSCN_LOAD_DATA = ^SCN_LOAD_DATA;
 
 
-  SCN_DATA_LOADED = packed record
+  SCN_DATA_LOADED = record
             code: UINT;
             hwnd: HWINDOW;
              uri: LPCWSTR;
@@ -145,7 +145,7 @@ type
   LPSCN_DATA_LOADED = ^SCN_DATA_LOADED;
 
 
-  SCN_ATTACH_BEHAVIOR = packed record
+  SCN_ATTACH_BEHAVIOR = record
             code: UINT;
             hwnd: HWINDOW;
          element: HELEMENT;
@@ -156,14 +156,14 @@ type
   LPSCN_ATTACH_BEHAVIOR = ^SCN_ATTACH_BEHAVIOR;
 
 
-  SCN_ENGINE_DESTROYED = packed record
+  SCN_ENGINE_DESTROYED = record
     code: UINT;
     hwnd: HWINDOW
   end;
   LPSCN_ENGINE_DESTROYED = ^SCN_ENGINE_DESTROYED;
 
 
-  SCN_POSTED_NOTIFICATION = packed record
+  SCN_POSTED_NOTIFICATION = record
        code: UINT;
        hwnd: HWINDOW;
      wparam: UINT_PTR;
@@ -454,7 +454,7 @@ type
     EDIT_CHANGED_REASON_DUMMY = MAXINT
   );
 
-  BEHAVIOR_EVENT_PARAMS = packed record
+  BEHAVIOR_EVENT_PARAMS = record
          cmd: BEHAVIOR_EVENTS;
     heTarget: HELEMENT;
           he: HELEMENT;
@@ -532,14 +532,14 @@ type
   SciterWindowDelegate = function(hwnd: HWINDOW; msg: UINT; w: WParam; l: LPARAM; pParam: LPVOID; var pResult: LRESULT): BOOL; stdcall;
   PSciterWindowDelegate = ^SciterWindowDelegate;
 
-  ISciterAPI = packed record
+  ISciterAPI = record
     Version: UINT;
     SciterClassName: function: LPCWSTR; stdcall;
     SciterVersion: function(major: BOOL): UINT; stdcall;
     SciterDataReady: function(hwnd: HWINDOW; uri: PWideChar; data: PByte; dataLength: UINT): BOOL; stdcall;
     SciterDataReadyAsync: function(hwnd: HWINDOW; uri: PWideChar; data: PByte; dataLength: UINT; requestId: LPVOID): BOOL; stdcall;
-    SciterProc: function(hwnd: HWINDOW; msg: Cardinal; wParam: Integer; lParam: Integer): LRESULT; stdcall;
-    SciterProcND: function(hwnd: HWINDOW; msg: Cardinal; wParam: Integer; lParam: Integer; var pbHANDLED: BOOL): LRESULT; stdcall;
+    SciterProc: function(hwnd: HWINDOW; msg: UINT; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
+    SciterProcND: function(hwnd: HWINDOW; msg: UINT; wParam: WPARAM; lParam: LPARAM; var pbHANDLED: BOOL): LRESULT; stdcall;
     SciterLoadFile: function(hWndSciter: HWINDOW; filename:LPCWSTR): BOOL; stdcall;
     SciterLoadHtml: function(hWndSciter: HWINDOW; html: PByte; htmlSize: UINT; baseUrl: PWideChar): BOOL; stdcall;
     SciterSetCallback: procedure(hWndSciter: HWINDOW; cb: LPSciterHostCallback; cbParam: Pointer); stdcall;
@@ -732,7 +732,7 @@ type
   );
 
 
-  INITIALIZATION_PARAMS = packed record
+  INITIALIZATION_PARAMS = record
     cmd: INITIALIZATION_EVENTS;
   end;
   PINITIALIZATION_PARAMS = ^INITIALIZATION_PARAMS;
@@ -801,7 +801,7 @@ type
   );
 
 
-  MOUSE_PARAMS = packed record
+  MOUSE_PARAMS = record
              cmd: MOUSE_EVENTS;
           target: HELEMENT;
              pos: TPoint;
@@ -825,7 +825,7 @@ type
     KEY_EVENTS_DUMMY = MAXINT // doesn't exist in sciter api, used for sizeof(uint) alignment
   );
 
-  KEY_PARAMS = packed record
+  KEY_PARAMS = record
           cmd: KEY_EVENTS;
        target: HELEMENT;
      key_code: UINT;
@@ -842,7 +842,7 @@ type
   );
 
 
-  FOCUS_PARAMS = packed record
+  FOCUS_PARAMS = record
                cmd: FOCUS_EVENTS;
             target: HELEMENT;
     by_mouse_click: BOOL;
@@ -851,7 +851,7 @@ type
   PFOCUS_PARAMS = ^FOCUS_PARAMS;
 
 
-  DATA_ARRIVED_PARAMS = packed record
+  DATA_ARRIVED_PARAMS = record
     initiator: HELEMENT;
          data: PByte;
      dataSize: UINT;
@@ -869,7 +869,7 @@ type
       DRAW_EVENTS_DUMMY = MAXINT
   );
 
-  DRAW_PARAMS = packed record
+  DRAW_PARAMS = record
     cmd: DRAW_EVENTS;
     hdc: HDC;
     area: TRect;
@@ -878,7 +878,7 @@ type
   PDRAW_PARAMS=^DRAW_PARAMS;
 
 
-  TIMER_PARAMS = packed record
+  TIMER_PARAMS = record
     timerId: UINT_PTR;
   end;
   PTIMER_PARAMS = ^TIMER_PARAMS;
@@ -916,7 +916,7 @@ type
     SCROLL_EVENTS_DUMMY = MAXINT
   );
 
-  SCROLL_PARAMS = packed record
+  SCROLL_PARAMS = record
     cmd: SCROLL_EVENTS;
     target: HELEMENT;
     pos: integer;
