@@ -844,6 +844,7 @@ type
     function RegisterNativeClass(const ClassInfo: ISciterClassInfo; ThrowIfExists: Boolean; ReplaceClassDef: Boolean = False): tiscript_class; overload;
     function RegisterNativeClass(const ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean { reserved } = False): tiscript_class; overload;
     procedure RegisterNativeFunction(const Name: WideString; Handler: ptiscript_method);
+    procedure RegisterNativeFunctionTag(const Name: WideString; Handler: ptiscript_tagged_method; ns: tiscript_value; Tag: Pointer);
     procedure SaveToFile(const FileName: WideString; const Encoding: WideString = 'UTF-8' { reserved, TODO:} );
     function SciterValueToJson(Obj: TSciterValue): WideString;
     function Select(const Selector: WideString): IElement;
@@ -1384,9 +1385,9 @@ end;
 procedure TSciter.CreateWnd;
 var
   SR: SCDOM_RESULT;
+  pbHandled: BOOL;
 begin
   inherited CreateWnd;
-
   if DesignMode then
     Exit;
 
@@ -1413,6 +1414,7 @@ begin
     end;
     if Assigned(FOnHandleCreated) then
       FOnHandleCreated(Self);
+    Application.ProcessMessages;
   end;
 end;
 
@@ -1966,7 +1968,7 @@ procedure TSciter.MouseDown(Button: TMouseButton; Shift: TShiftState; X,
   Y: Integer);
 begin
   inherited MouseDown(Button, Shift, X, Y);
-  SetFocus;
+  //SetFocus;
 end;
 
 { Tweaking TWinControl MouseWheel behavior }
@@ -2097,10 +2099,14 @@ begin
   Result := SciterAPI.RegisterNativeClass(vm, ClassDef, ThrowIfExists, ReplaceClassDef);
 end;
 
-procedure TSciter.RegisterNativeFunction(const Name: WideString;
-  Handler: ptiscript_method);
+procedure TSciter.RegisterNativeFunction(const Name: WideString; Handler: ptiscript_method);
 begin
-  SciterAPI.RegisterNativeFunction(VM, Name, Handler);
+  SciterAPI.RegisterNativeFunction(VM, 0, Name, Handler);
+end;
+
+procedure TSciter.RegisterNativeFunctionTag(const Name: WideString; Handler: ptiscript_tagged_method; ns: tiscript_value; Tag: Pointer);
+begin
+  SciterAPI.RegisterNativeFunction(VM, ns, Name, Handler, True, Tag);
 end;
 
 { Exprerimental }
@@ -2237,7 +2243,8 @@ end;
 procedure TSciter.SetOption(const Key: SCITER_RT_OPTIONS;
   const Value: UINT_PTR);
 begin
-  API.SciterSetOption(Handle, Key, Value);
+  if not API.SciterSetOption(Handle, Key, Value) then
+    raise ESciterException.Create('Failed to set Sciter option');
 end;
 
 procedure TSciter.ShowInspector(const Element: IElement);
@@ -2319,7 +2326,7 @@ function TSciter.TryCall(const FunctionName: WideString;
 var
   pVal: TSciterValue;
   sFunctionName: AnsiString;
-  pArgs: array[0..255] of TSciterValue;
+  pArgs: array of TSciterValue;
   cArgs: Integer;
   i: Integer;
   SR: BOOL;
@@ -2331,18 +2338,18 @@ begin
   if cArgs > 256 then
     raise ESciterException.Create('Too many arguments.');
 
-  for i := Low(pArgs) to High(pArgs) do
-    API.ValueInit(@pArgs[i]);
-
-  for i := Low(Args) to High(Args) do
-  begin
-    V2S(Args[i], @pArgs[i]);
-  end;
-
   if cArgs = 0 then
     SR := API.SciterCall(Handle, PAnsiChar(sFunctionName), 0, nil, pVal)
   else
+  begin
+    SetLength(pArgs, cArgs);
+
+    for i := Low(Args) to High(Args) do
+      V2S(Args[i], @pArgs[i]);
+
     SR := API.SciterCall(Handle, PAnsiChar(sFunctionName), cArgs, @pArgs[0], pVal);
+  end;
+
   if SR then
   begin
     S2V(@pVal, RetVal);
@@ -2381,10 +2388,11 @@ begin
             if Assigned(FOnFocus) then
               FOnFocus(Self);
           end;
+
         WM_GETDLGCODE:
           // Tweaking arrow keys and TAB handling (VCL-specific)
           begin
-            Message.Result := DLGC_WANTALLKEYS or DLGC_WANTTAB or DLGC_WANTARROWS or DLGC_WANTCHARS or DLGC_HASSETSEL;
+            Message.Result := DLGC_WANTALLKEYS {or DLGC_WANTTAB} or DLGC_WANTARROWS or DLGC_WANTCHARS or DLGC_HASSETSEL;
             if Message.lParam <> 0 then
             begin
               M := PMsg(Message.lParam);
@@ -2398,11 +2406,6 @@ begin
               end;
             end;
             Exit;
-          end;
-
-        WM_VSCROLL:
-          begin
-
           end;
       end;
 

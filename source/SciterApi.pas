@@ -959,7 +959,7 @@ function IsNameExists(const vm: HVM; const Name: WideString): boolean;
 function IsNativeClassExists(const vm: HVM; const Name: WideString): boolean;
 function GetNativeObject(const vm: HVM; const Name: WideString): tiscript_value;
 function GetNativeClass(const vm: HVM; const ClassName: WideString): tiscript_class;
-function RegisterNativeFunction(const vm: HVM; const Name: WideString; Handler: ptiscript_method; ThrowIfExists: Boolean = False): Boolean;
+function RegisterNativeFunction(const vm: HVM; ns: tiscript_value; const Name: WideString; Handler: Pointer; ThrowIfExists: Boolean = False; tag: Pointer = nil): Boolean;
 function RegisterNativeClass(const vm: HVM; ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_class;
 function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: tiscript_class): tiscript_object; overload;
 function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: WideString): tiscript_object; overload;
@@ -1080,7 +1080,7 @@ end;
 { Returns true if a function registration was successfull,
   false if a function with same name was already registered,
   throws an exception otherwise }
-function RegisterNativeFunction(const vm: HVM; const Name: WideString; Handler: ptiscript_method; ThrowIfExists: Boolean = False): Boolean;
+function RegisterNativeFunction(const vm: HVM; ns: tiscript_value; const Name: WideString; Handler: Pointer; ThrowIfExists: Boolean = False; tag: Pointer = nil): Boolean;
 var
   method_def: ptiscript_method_def;
   smethod_name: AnsiString;
@@ -1091,7 +1091,10 @@ begin
   if IsNameExists(vm, Name) and ThrowIfExists then
     raise ESciterException.CreateFmt('Failed to register native function %s. Object with same name already exists.', [Name]);
     
-  zns := NI.get_global_ns(vm);
+  if ns = 0 then
+    zns := NI.get_global_ns(vm)
+  else
+    zns := ns;
 
   smethod_name := AnsiString(Name);
   func_name := NI.string_value(vm, PWideChar(Name), Length(Name));
@@ -1103,7 +1106,7 @@ begin
     method_def.dispatch := nil;
     method_def.name := StrNew(PAnsiChar(smethod_name));
     method_def.handler := Handler;
-    method_def.tag := nil;
+    method_def.tag := tag;
     func_def := NI.native_function_value(vm, method_def);
     if not NI.is_native_function(func_def) then
     begin
