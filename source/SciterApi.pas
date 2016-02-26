@@ -100,6 +100,14 @@ type
     SciterResourceTypeDummy = MaxInt
   );
 
+  SciterGFXLayer =
+  (
+    GFX_LAYER_GDI      = 1,
+    GFX_LAYER_WARP     = 2,
+    GFX_LAYER_D2D      = 3,
+    GFX_LAYER_AUTO     = 65535
+  );
+
   SCITER_RT_OPTIONS { NB: UINT_PTR } = (
    SCITER_SMOOTH_SCROLL = 1,      // value:TRUE - enable, value:FALSE - disable, enabled by default
    SCITER_CONNECTION_TIMEOUT = 2, // value: milliseconds, connection timeout of http client
@@ -116,6 +124,7 @@ type
    SCITER_SET_UX_THEMING = 11,    // hWnd = NULL, value - BOOL, TRUE - the engine will use "unisex" theme that is common for all platforms.
                                   // That UX theme is not using OS primitives for rendering input elements. Use it if you want exactly
                                   // the same (modulo fonts) look-n-feel on all platforms.
+   SCITER_ALPHA_WINDOW  = 12,     // hWnd, value - TRUE/FALSE - window uses per pixel alpha (e.g. WS_EX_LAYERED/UpdateLayeredWindow() window)
    SCITER_RT_OPTIONS_DUMMY = MAXINT
   );
 

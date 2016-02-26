@@ -59,6 +59,7 @@ type
     name: PAnsiChar;
     handler: Pointer; // can be either tiscript_method or tiscript_tagged_method
     tag: Pointer;
+    payload: tiscript_value;
   end;
   ptiscript_method_def = ^tiscript_method_def;
 
