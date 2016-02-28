@@ -1506,7 +1506,7 @@ end;
 
 function TSciter.FilePathToURL(const FileName: String): String;
 begin
-  Result := 'file:///' + StringReplace(FileName, '\', '/', [rfReplaceAll]);
+  Result := 'file://' + StringReplace(FileName, '\', '/', [rfReplaceAll]);
 end;
 
 function TSciter.FindElement(Point: TPoint): IElement;
