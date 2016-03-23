@@ -221,6 +221,17 @@ type
     T_DUMMY = MAXINT
   );
 
+  TSciterValueUnitTypeObject =
+  (
+  UT_OBJECT_ARRAY,
+  UT_OBJECT_OBJECT,
+  UT_OBJECT_CLASS,
+  UT_OBJECT_NATIVE,
+  UT_OBJECT_FUNCTION,
+  UT_OBJECT_ERROR,
+  UT_DUMMY = MAXINT
+  );
+
 
   EVENT_GROUPS =
   (
@@ -682,7 +693,7 @@ type
     ValueClear: function(Value: PSciterValue): UINT; stdcall;
     ValueCompare: function(Value1: PSciterValue; Value2: PSciterValue): UINT; stdcall;
     ValueCopy: function(dst: PSciterValue; src: PSciterValue): UINT; stdcall;
-    ValueIsolate: TProcPointer;
+    ValueIsolate: function(Value: PSciterValue): UINT; stdcall;
     ValueType: function(Value: PSciterValue; var pType: TSciterValueType; var pUnits: UINT): UINT; stdcall;
     ValueStringData: function(Value: PSciterValue; var Chars: PWideChar; var NumChars: UINT): UINT; stdcall;
     ValueStringDataSet: function(Value: PSciterValue; Chars: PWideChar; NumChars: UINT; Units: UINT): UINT; stdcall;
@@ -1269,7 +1280,6 @@ var
   arrSize: UINT;
   sArrItem: TSciterValue;
   oArrItem: OleVariant;
-  oleArrayResult: Variant;
   j: Integer;
 begin
   API.ValueInit(@sArrItem);
@@ -1386,6 +1396,18 @@ begin
         end
           else
         begin
+          // Try to isolate tiscript value to make it as plain sciter type
+          // TODO: should we need to isolate all types?
+          case TSciterValueUnitTypeObject(pUnits) of
+          UT_OBJECT_ARRAY, UT_OBJECT_OBJECT, UT_OBJECT_ERROR:
+            // array, map and error
+            begin
+              Result:= API.ValueIsolate(Value);
+              Result := S2V(Value, OleValue);
+              Exit;
+            end;
+          end;
+
           OleValue := GetNativeObjectJson(Value);
           Result := HV_OK;
         end;
