@@ -223,15 +223,14 @@ type
 
   TSciterValueUnitTypeObject =
   (
-  UT_OBJECT_ARRAY,
-  UT_OBJECT_OBJECT,
-  UT_OBJECT_CLASS,
-  UT_OBJECT_NATIVE,
-  UT_OBJECT_FUNCTION,
-  UT_OBJECT_ERROR,
-  UT_DUMMY = MAXINT
+    UT_OBJECT_ARRAY,
+    UT_OBJECT_OBJECT,
+    UT_OBJECT_CLASS,
+    UT_OBJECT_NATIVE,
+    UT_OBJECT_FUNCTION,
+    UT_OBJECT_ERROR,
+    UT_DUMMY = MAXINT
   );
-
 
   EVENT_GROUPS =
   (
@@ -735,6 +734,13 @@ type
 
     SciterGetCallbackParam: TProcPointer;
     SciterPostCallback: TProcPointer;
+
+//    GetSciterGraphicsAPI: TProcPointer;
+//    GetSciterRequestAPI: TProcPointer;
+
+//    SciterCreateOnDirectXWindow: function(hwnd: HWINDOW; var pSwapChain: IDXGISwapChain): BOOL; stdcall;
+//    SciterRenderOnDirectXWindow: function(hwnd: HWINDOW; elementToRenderOrNull: HELEMENT; frontLayer: BOOL): BOOL; stdcall;
+//    SciterRenderOnDirectXTexture: function(hwnd: HWINDOW; elementToRenderOrNull: HELEMENT; var surface: IDXGISurface): BOOL; stdcall;
   end;
 
   PSciterApi = ^ISciterAPI;
@@ -1127,6 +1133,7 @@ begin
     method_def.name := StrNew(PAnsiChar(smethod_name));
     method_def.handler := Handler;
     method_def.tag := tag;
+    method_def.payload := 0;
     func_def := NI.native_function_value(vm, method_def);
     if not NI.is_native_function(func_def) then
     begin
@@ -1289,12 +1296,12 @@ begin
     T_ARRAY:
       begin
         API.ValueElementsCount(Value, arrSize);
-        OleValue := VarArrayCreate([0, arrSize], varVariant );
+        OleValue := VarArrayCreate([0, arrSize], varVariant);
         for j := 0 to arrSize - 1 do
         begin
           oArrItem := Unassigned;
           API.ValueNthElementValue(Value, j, @sArrItem);
-          S2V(@sArrItem, oArrItem );
+          S2V(@sArrItem, oArrItem);
           VarArrayPut(Variant(OleValue), oArrItem, [j]);
         end;
         Result := HV_OK;
@@ -1396,16 +1403,14 @@ begin
         end
           else
         begin
-          // Try to isolate tiscript value to make it as plain sciter type
-          // TODO: should we need to isolate all types?
+          // TODO: isolate all unit types
           case TSciterValueUnitTypeObject(pUnits) of
-          UT_OBJECT_ARRAY, UT_OBJECT_OBJECT, UT_OBJECT_ERROR:
-            // array, map and error
-            begin
-              Result:= API.ValueIsolate(Value);
-              Result := S2V(Value, OleValue);
-              Exit;
-            end;
+            UT_OBJECT_ARRAY, UT_OBJECT_OBJECT, UT_OBJECT_ERROR:
+              begin
+                Result := API.ValueIsolate(Value);
+                Result := S2V(Value, OleValue);
+                Exit;
+              end;
           end;
 
           OleValue := GetNativeObjectJson(Value);

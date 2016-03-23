@@ -904,7 +904,7 @@ type
     property PopupMenu;
     property ShowHint;
     property TabOrder;
-    property TabStop default True;
+    property TabStop default False;
     property Visible;
     property OnFocus: TSciterOnFocus read FOnFocus write FOnFocus;
     property OnDataLoaded: TSciterOnDataLoaded read FOnDataLoaded write FOnDataLoaded;
@@ -1336,7 +1336,6 @@ begin
   FManagedElements := TElementList.Create(False);
   Width := 300;
   Height := 300;
-  TabStop := True;
 end;
 
 destructor TSciter.Destroy;
@@ -1373,7 +1372,9 @@ end;
 procedure TSciter.CreateParams(var Params: TCreateParams);
 begin
   inherited CreateParams(Params);
-  Params.Style := Params.Style or WS_CHILD or WS_TABSTOP or WS_VISIBLE;
+  Params.Style := Params.Style or WS_CHILD or WS_VISIBLE;
+  if TabStop then
+    Params.Style := Params.Style or WS_TABSTOP;
   Params.ExStyle := Params.ExStyle or WS_EX_CONTROLPARENT;
 end;
 
@@ -1391,31 +1392,28 @@ begin
   if DesignMode then
     Exit;
 
-  if HandleAllocated then
+  API.SciterSetCallback(Handle, LPSciterHostCallback(@HostCallback), Self);
+
+  SR := API.SciterWindowAttachEventHandler(Handle, LPELEMENT_EVENT_PROC(@_SciterViewEventProc), Self, UINT(HANDLE_ALL));
+  if SR <> SCDOM_OK then
+    raise ESciterException.Create('Failed to setup Sciter window element callback function.');
+
+  API.SciterSetupDebugOutput(Handle, Self, PDEBUG_OUTPUT_PROC(@SciterDebug));
+
+  API.SciterSetHomeURL(Handle, PWideChar(FHomeURL));
+
+  if FHtml <> '' then
   begin
-    API.SciterSetCallback(Handle, LPSciterHostCallback(@HostCallback), Self);
-
-    SR := API.SciterWindowAttachEventHandler(Handle, LPELEMENT_EVENT_PROC(@_SciterViewEventProc), Self, UINT(HANDLE_ALL));
-    if SR <> SCDOM_OK then
-      raise ESciterException.Create('Failed to setup Sciter window element callback function.');
-
-    API.SciterSetupDebugOutput(Handle, Self, PDEBUG_OUTPUT_PROC(@SciterDebug));
-
-    API.SciterSetHomeURL(Handle, PWideChar(FHomeURL));
-
-    if FHtml <> '' then
-    begin
-      LoadHtml(FHtml, FBaseUrl);
-    end
-      else
-    if FUrl <> '' then
-    begin
-      LoadURL(FUrl);
-    end;
-    if Assigned(FOnHandleCreated) then
-      FOnHandleCreated(Self);
-    Application.ProcessMessages;
+    LoadHtml(FHtml, FBaseUrl);
+  end
+    else
+  if FUrl <> '' then
+  begin
+    LoadURL(FUrl);
   end;
+  if Assigned(FOnHandleCreated) then
+    FOnHandleCreated(Self);
+  Application.ProcessMessages;
 end;
 
 procedure TSciter.DataReady(const uri: WideString; data: PByte;
@@ -1586,12 +1584,6 @@ function TSciter.GetRoot: IElement;
 var
   he: HELEMENT;
 begin
-  if not HandleAllocated then
-  begin
-    Result := nil;
-    Exit;
-  end;
-
   he := nil;
   if API.SciterGetRootElement(Handle, he) = SCDOM_OK then
     Result := ElementFactory(Self, he)
@@ -1930,12 +1922,8 @@ begin
 
   FUrl := '';
 
-  if HandleAllocated then
-  begin
-    if not API.SciterLoadHtml(Handle, PByte(pHtml), iLen, PWideChar(BaseURL)) then
-      raise ESciterException.CreateFmt('Failed to load HTML.', []);
-  end
-    // else HTML will be loaded in CreateWnd
+  if not API.SciterLoadHtml(Handle, PByte(pHtml), iLen, PWideChar(BaseURL)) then
+    raise ESciterException.CreateFmt('Failed to load HTML.', []);
 end;
 
 function TSciter.LoadURL(const URL: WideString; Async: Boolean = True): Boolean;
@@ -1949,11 +1937,7 @@ begin
   FHtml := '';
   FBaseUrl := '';
 
-  if HandleAllocated then
-  begin
-    Result := API.SciterLoadFile(Handle, PWideChar(URL));
-  end
-  // else URL will be loaded in CreateWnd
+  Result := API.SciterLoadFile(Handle, PWideChar(URL));
 end;
 
 function TSciter.MainWindowHook(var Message: TMessage): Boolean;
@@ -2196,13 +2180,10 @@ end;
 procedure TSciter.SetHomeURL(const URL: WideString);
 begin
   FHomeURL := URL;
-  if HandleAllocated then
-  begin
-    if FHomeURL = '' then Exit;
-    
-    if not API.SciterSetHomeURL(Handle, PWideChar(URL)) then
-      raise ESciterException.Create('Failed to set Sciter home URL');
-  end;
+  if FHomeURL = '' then Exit;
+
+  if not API.SciterSetHomeURL(Handle, PWideChar(URL)) then
+    raise ESciterException.Create('Failed to set Sciter home URL');
 end;
 
 function TSciter.SetMediaType(const MediaType: WideString): Boolean;
@@ -2380,54 +2361,42 @@ var
 begin
   if not DesignMode then
   begin
-    if HandleAllocated then
-    begin
-      case Message.Msg of
-        WM_SETFOCUS:
-          begin
-            if Assigned(FOnFocus) then
-              FOnFocus(Self);
-          end;
+    case Message.Msg of
+      WM_SETFOCUS:
+        begin
+          if Assigned(FOnFocus) then
+            FOnFocus(Self);
+        end;
 
-        WM_GETDLGCODE:
-          // Tweaking arrow keys and TAB handling (VCL-specific)
+      WM_GETDLGCODE:
+        // Tweaking arrow keys and TAB handling (VCL-specific)
+        begin
+          Message.Result := DLGC_WANTALLKEYS or DLGC_WANTARROWS or DLGC_WANTCHARS or DLGC_HASSETSEL;
+          if TabStop then
+            Message.Result := Message.Result or DLGC_WANTTAB;
+          if Message.lParam <> 0 then
           begin
-            Message.Result := DLGC_WANTALLKEYS {or DLGC_WANTTAB} or DLGC_WANTARROWS or DLGC_WANTCHARS or DLGC_HASSETSEL;
-            if Message.lParam <> 0 then
-            begin
-              M := PMsg(Message.lParam);
-              case M.Message of
-                WM_SYSKEYDOWN, WM_SYSKEYUP, WM_SYSCHAR,
-                WM_KEYDOWN, WM_KEYUP, WM_CHAR:
-                begin
-                  Perform(M.message, M.wParam, M.lParam);
-                  // Message.Result := Message.Result or DLGC_WANTMESSAGE or DLGC_WANTTAB;
-                end;
+            M := PMsg(Message.lParam);
+            case M.Message of
+              WM_SYSKEYDOWN, WM_SYSKEYUP, WM_SYSCHAR,
+              WM_KEYDOWN, WM_KEYUP, WM_CHAR:
+              begin
+                Perform(M.message, M.wParam, M.lParam);
+                // Message.Result := Message.Result or DLGC_WANTMESSAGE or DLGC_WANTTAB;
               end;
             end;
-            Exit;
           end;
-      end;
-
-      llResult := API.SciterProcND(Handle, Message.Msg, Message.WParam, Message.LParam, bHandled);
-      if bHandled then
-      begin
-        Message.Result := llResult;
-      end
-        else
-      begin
-        inherited WndProc(Message);
-      end;
-    end
-      else
-    begin
-      inherited WndProc(Message);
+          Exit;
+        end;
     end;
-  end
+
+    llResult := API.SciterProcND(Handle, Message.Msg, Message.WParam, Message.LParam, bHandled);
+    if bHandled then
+      Message.Result := llResult
     else
-  begin
+      inherited WndProc(Message);
+  end else
     inherited WndProc(Message);
-  end
 end;
 
 constructor TElement.Create(ASciter: TSciter; h: HELEMENT);
