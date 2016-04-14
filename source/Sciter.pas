@@ -825,6 +825,7 @@ type
     destructor Destroy; override;
     function Call(const FunctionName: WideString; const Args: array of OleVariant): OleVariant;
     procedure DataReady(const uri: WideString; data: PByte; dataLength: UINT);
+    procedure DataReadyAsync(const uri: WideString; data: PByte; dataLength: UINT; requestId: LPVOID);
     function Eval(const Script: WideString): OleVariant;
     function FilePathToURL(const FileName: String): String;
     function FindElement(Point: TPoint): IElement;
@@ -1413,13 +1414,18 @@ begin
   end;
   if Assigned(FOnHandleCreated) then
     FOnHandleCreated(Self);
-  Application.ProcessMessages;
+//  Application.ProcessMessages;
 end;
 
-procedure TSciter.DataReady(const uri: WideString; data: PByte;
-  dataLength: UINT);
+procedure TSciter.DataReady(const uri: WideString; data: PByte; dataLength: UINT);
 begin
   if not API.SciterDataReady(Handle, PWideChar(uri), data, dataLength) then
+    raise ESciterException.CreateFmt('Failed to handle resource "%s".', [AnsiString(uri)]);
+end;
+
+procedure TSciter.DataReadyAsync(const uri: WideString; data: PByte; dataLength: UINT; requestId: LPVOID);
+begin
+  if not API.SciterDataReadyAsync(Handle, PWideChar(uri), data, dataLength, requestId) then
     raise ESciterException.CreateFmt('Failed to handle resource "%s".', [AnsiString(uri)]);
 end;
 
@@ -1691,7 +1697,7 @@ begin
   end;
 
   // Temporary fix: sometimes bottom part of document stays invisible until parent form gets resized
-  API.SciterProcND(Handle, WM_SIZE, 0, MAKELPARAM(ClientRect.Right - ClientRect.Left + 1, ClientRect.Bottom - ClientRect.Top), bHandled);
+  API.SciterProcND(Handle, WM_SIZE, 0, MAKELPARAM(ClientRect.Right - ClientRect.Left, ClientRect.Bottom - ClientRect.Top), bHandled);
 end;
 
 function TSciter.HandleEngineDestroyed(var data: SCN_ENGINE_DESTROYED): UINT;
