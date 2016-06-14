@@ -282,10 +282,10 @@ type
   TSciterOnMessage = procedure(ASender: TObject; const Args: TSciterOnMessageEventArgs) of object;
 
   TSciterOnLoadData = procedure(ASender: TObject; const url: WideString; resType: SciterResourceType;
-                                                  requestId: Integer; out discard: Boolean) of object;
+                                                  requestId: Pointer; out discard: Boolean; out delay: Boolean) of object;
   TSciterOnDataLoaded = procedure(ASender: TObject; const url: WideString; resType: SciterResourceType;
                                                     data: PByte; dataLength: Integer; status: Integer;
-                                                    requestId: Integer) of object;
+                                                    requestId: Cardinal) of object;
   TSciterOnFocus = procedure(ASender: TObject) of object;
 
   TSciterOnDocumentCompleteEventArgs = class
@@ -1671,7 +1671,7 @@ end;
 function TSciter.HandleDataLoaded(var data: SCN_DATA_LOADED): UINT;
 begin
   if Assigned(FOnDataLoaded) then
-    FOnDataLoaded(Self, WideString(data.uri), data.dataType, data.data, data.dataSize, 0, Integer(data.status));
+    FOnDataLoaded(Self, WideString(data.uri), data.dataType, data.data, data.dataSize, 0, data.status);
   Result := 0;
 end;
 
@@ -1766,7 +1766,7 @@ end;
 
 function TSciter.HandleLoadData(var data: SCN_LOAD_DATA): UINT;
 var
-  discard: Boolean;
+  discard, delay: Boolean;
   wUrl: WideString;
   wResName: WideString;
   pStream: TCustomMemoryStream;
@@ -1799,9 +1799,11 @@ begin
     if Assigned(FOnLoadData) then
     begin
       wUrl := WideString(data.uri);
-      FOnLoadData(Self, wUrl, data.dataType, Integer(data.requestId), discard);
+      FOnLoadData(Self, wUrl, data.dataType, data.requestId, discard, delay);
       if discard then
-        Result := LOAD_DISCARD;
+        Result := LOAD_DISCARD
+      else if delay then
+        Result := LOAD_DELAYED;
     end;
   end;
 end;

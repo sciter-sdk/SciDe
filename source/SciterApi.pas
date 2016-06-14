@@ -42,6 +42,7 @@ const
   LOAD_OK     : UINT       = 0;
   LOAD_DISCARD: UINT       = 1;
   LOAD_DELAYED: UINT       = 2;
+  LOAD_MYSELF : UINT       = 3;
 
 type
 
