@@ -1387,7 +1387,6 @@ end;
 procedure TSciter.CreateWnd;
 var
   SR: SCDOM_RESULT;
-  pbHandled: BOOL;
 begin
   inherited CreateWnd;
   if DesignMode then
