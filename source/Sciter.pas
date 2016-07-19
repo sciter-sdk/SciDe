@@ -937,7 +937,7 @@ procedure Register;
 implementation
 
 uses
-  SciterOle, MLang;
+  SciterOle, Winapi.MLang;
 
 var
   Behaviors: TList;
@@ -2107,8 +2107,8 @@ var
   pInfo: tagMIMECSETINFO;
   pInfo1: tagMIMECPINFO;
   pdwMode: Cardinal;
-  pcSrcSize: ActiveX.SYSUINT;
-  pcDstSize: ActiveX.SYSUINT;
+  pcSrcSize: UINT;
+  pcDstSize: UINT;
   pRet: PAnsiChar;
   sHtml: WideString;
   enc: Cardinal;
@@ -2130,12 +2130,12 @@ begin
       enc := pInfo.uiInternetEncoding;
       
     // input string is null-terminated
-    pcsrcSize := SYSUINT(-1);
+    pcSrcSize := UINT(-1);
     // Get buffer size
-    OleCheck(pLang.ConvertStringFromUnicode(pdwMode, enc, PWideChar(sHtml), pcSrcSize, nil, pcDstSize));
+    OleCheck(pLang.ConvertStringFromUnicode(pdwMode, enc, PWideChar(sHtml), @pcSrcSize, nil, pcDstSize));
     // Performing conversion
     GetMem(pRet, pcDstSize + 2);
-    OleCheck(pLang.ConvertStringFromUnicode(pdwMode, enc, PWideChar(sHtml), pcSrcSize, pRet, pcDstSize));
+    OleCheck(pLang.ConvertStringFromUnicode(pdwMode, enc, PWideChar(sHtml), @pcSrcSize, pRet, pcDstSize));
 
     pStm := TFileStream.Create(FileName, fmOpenWrite, fmShareDenyNone);
     try
