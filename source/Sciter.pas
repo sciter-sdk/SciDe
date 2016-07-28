@@ -824,6 +824,9 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function Call(const FunctionName: WideString; const Args: array of OleVariant): OleVariant;
+    procedure Fire(he: HELEMENT; cmd: UINT; data: OleVariant; async: Boolean = True);
+    procedure FireRoot(cmd: UINT; data: OleVariant; async: Boolean = True); overload;
+    procedure FireRoot(cmd: UINT; async: Boolean = True); overload;
     procedure DataReady(const uri: WideString; data: PByte; dataLength: UINT);
     procedure DataReadyAsync(const uri: WideString; data: PByte; dataLength: UINT; requestId: LPVOID);
     function Eval(const Script: WideString): OleVariant;
@@ -1368,6 +1371,30 @@ function TSciter.Call(const FunctionName: WideString;
 begin
   if not TryCall(FunctionName, Args, Result) then
     raise ESciterCallException.Create(FunctionName);
+end;
+
+procedure TSciter.FireRoot(cmd: UINT; data: OleVariant; async: Boolean = True);
+begin
+  Fire(Self.Root.Handle, cmd, data, async);
+end;
+
+procedure TSciter.FireRoot(cmd: UINT; async: Boolean = True);
+begin
+  Fire(Self.Root.Handle, cmd, Variants.Null, async);
+end;
+
+procedure TSciter.Fire(he: HELEMENT; cmd: UINT; data: OleVariant; async: Boolean = True);
+var
+  evt: BEHAVIOR_EVENT_PARAMS;
+  bHandled: BOOL;
+  pVal: TSciterValue;
+begin
+  evt.cmd := BEHAVIOR_EVENTS(cmd);
+  V2S(data, @pVal);
+  evt.data := pVal;
+  evt.he := he;
+  evt.heTarget := he;
+  API.SciterFireEvent(evt, async, bHandled);
 end;
 
 procedure TSciter.CreateParams(var Params: TCreateParams);
@@ -2113,9 +2140,10 @@ var
   sHtml: WideString;
   enc: Cardinal;
   pStm: TFileStream;
+  flags: Word;
 begin
   sHtml := Self.Html;
-  
+
   pdwMode := 0;
   pLang := CoCMultiLanguage.Create;
   pRet := nil;
@@ -2130,14 +2158,18 @@ begin
       enc := pInfo.uiInternetEncoding;
       
     // input string is null-terminated
-    pcSrcSize := UINT(-1);
+    pcsrcSize := UINT(-1);
     // Get buffer size
     OleCheck(pLang.ConvertStringFromUnicode(pdwMode, enc, PWideChar(sHtml), @pcSrcSize, nil, pcDstSize));
     // Performing conversion
     GetMem(pRet, pcDstSize + 2);
     OleCheck(pLang.ConvertStringFromUnicode(pdwMode, enc, PWideChar(sHtml), @pcSrcSize, pRet, pcDstSize));
 
-    pStm := TFileStream.Create(FileName, fmOpenWrite, fmShareDenyNone);
+    flags := fmOpenWrite;
+    if not FileExists(FileName) then
+      Flags := Flags or fmCreate;
+
+    pStm := TFileStream.Create(FileName, flags, fmShareDenyNone);
     try
       pStm.Write(pRet^, pcDstSize);
     finally
