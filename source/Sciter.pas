@@ -1334,7 +1334,7 @@ end;
 constructor TSciter.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  SetExceptionMask(GetExceptionMask + [exInvalidOp]);
+  SetExceptionMask(GetExceptionMask + [exInvalidOp, exOverflow, exUnderflow]);
   Application.HookMainWindow(MainWindowHook);
   FEventMap := TSciterEventMap.Create(Self, TSciterEventMapRule);
   FEventList := TInterfaceList.Create;
