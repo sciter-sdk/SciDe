@@ -975,14 +975,14 @@ type
   end;
 
 { Conversion functions. Mnemonics are: T - tiscript_value, S - TSciterValue, V - VARIANT }
-function  S2V(Value: PSciterValue; var OleValue: OleVariant): UINT;
-function  V2S(const Value: OleVariant; SciterValue: PSciterValue): UINT;
-function  T2V(const vm: HVM; Value: tiscript_value): OleVariant;
-function  V2T(const vm: HVM; const Value: OleVariant): tiscript_value;
+function S2V(Value: PSciterValue; var OleValue: OleVariant): UINT;
+function V2S(const Value: OleVariant; SciterValue: PSciterValue): UINT;
+function T2V(const vm: HVM; Value: tiscript_value): OleVariant;
+function V2T(const vm: HVM; const Value: OleVariant): tiscript_value;
 
-function  API: PSciterApi;
+function API: PSciterApi;
 function NI: ptiscript_native_interface;
-function IsNameExists(const vm: HVM; const Name: WideString): boolean;
+function IsNameExists(const vm: HVM; ns: tiscript_value; const Name: WideString): boolean;
 function IsNativeClassExists(const vm: HVM; const Name: WideString): boolean;
 function GetNativeObject(const vm: HVM; const Name: WideString): tiscript_value;
 function GetNativeClass(const vm: HVM; const ClassName: WideString): tiscript_class;
@@ -997,6 +997,9 @@ function SciterVarToString(value: PSciterValue): WideString;
 procedure ThrowError(const vm: HVM; const Message: AnsiString); overload;
 procedure ThrowError(const vm: HVM; const Message: WideString); overload;
 function GetNativeObjectJson(const Value: PSciterValue): WideString;
+
+var
+  SCITER_DLL_DIR: String = '';
 
 implementation
 
@@ -1062,15 +1065,16 @@ begin
     Result := True;
 end;
 
-{ Returns true if an object (class, variable, constant etc) exists in the global namespace,
-  false otherwise }
-function IsNameExists(const vm: HVM; const Name: WideString): boolean;
+{ Returns true if an object (class, variable, constant etc) exists in local or global namespace, false otherwise }
+function IsNameExists(const vm: HVM; ns: tiscript_value; const Name: WideString): boolean;
 var
-  var_name: tiscript_string;
-  var_value: tiscript_object;
-  zns: tiscript_value;
+  var_name, var_value, zns: tiscript_value;
 begin
-  zns := NI.get_global_ns(vm);
+  if ns = 0 then
+    zns := NI.get_global_ns(vm)
+  else
+    zns := ns;
+
   var_name  := NI.string_value(vm, PWideChar(Name), Length(Name));
   var_value := NI.get_prop(vm, zns, var_name);
   Result := not NI.is_undefined(var_value);
@@ -1111,11 +1115,9 @@ function RegisterNativeFunction(const vm: HVM; ns: tiscript_value; const Name: W
 var
   method_def: ptiscript_method_def;
   smethod_name: AnsiString;
-  func_def: tiscript_value;
-  func_name: tiscript_value;
-  zns: tiscript_value;
+  func_def, func_name, zns: tiscript_value;
 begin
-  if IsNameExists(vm, Name) and ThrowIfExists then
+  if IsNameExists(vm, ns, Name) and ThrowIfExists then
     raise ESciterException.CreateFmt('Failed to register native function %s. Object with same name already exists.', [Name]);
     
   if ns = 0 then
@@ -1131,27 +1133,21 @@ begin
   begin
     New(method_def);
     method_def.dispatch := nil;
-    method_def.name := StrNew(PAnsiChar(smethod_name));
+    method_def.name := PAnsiChar(smethod_name);
     method_def.handler := Handler;
     method_def.tag := tag;
     method_def.payload := 0;
     func_def := NI.native_function_value(vm, method_def);
     if not NI.is_native_function(func_def) then
-    begin
       raise Exception.CreateFmt('Failed to register native function "%s".', [Name]);
-    end;
     NI.set_prop(vm, zns, func_name, func_def);
     Result := True;
   end
     else
   if NI.is_native_function(func_def) then
-  begin
-    Result := False;
-  end
-    else
-  begin
+    Result := False
+  else
     raise ESciterException.CreateFmt('Cannot register native function "%s" (unexpected error). Seems that object with same name already exists.', [Name]);
-  end;
 end;
 
 function RegisterNativeClass(const vm: HVM; ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_class;
@@ -1253,9 +1249,9 @@ begin
   if FAPI = nil then
   begin
     {$IFDEF CPUX64}
-    HSCITER := LoadLibrary('sciter64.dll');
+    HSCITER := LoadLibrary(PWideChar(SCITER_DLL_DIR + 'sciter64.dll'));
     {$ELSE}
-    HSCITER := LoadLibrary('sciter32.dll');
+    HSCITER := LoadLibrary(PWideChar(SCITER_DLL_DIR + 'sciter32.dll'));
     {$ENDIF CPUX64}
     if HSCITER = 0 then
       raise ESciterException.Create('Failed to load Sciter DLL.');

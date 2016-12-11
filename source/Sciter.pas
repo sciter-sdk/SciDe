@@ -1345,11 +1345,9 @@ end;
 
 destructor TSciter.Destroy;
 begin
-  FEventList.Clear;
-  FEventList.Free;
-  FManagedElements.Free;
-  if FEventMap <> nil then
-    FEventMap.Free;
+  FreeAndNil(FEventList);
+  FreeAndNil(FManagedElements);
+  FreeAndNil(FEventMap);
   Application.UnhookMainWindow(MainWindowHook);
   inherited;
 end;
@@ -2385,7 +2383,8 @@ end;
 
 procedure TSciter.UnsubscribeAll;
 begin
-  FEventList.Clear;
+  if Assigned(FEventList) then
+    FEventList.Clear;
 end;
 
 procedure TSciter.UpdateWindow;
