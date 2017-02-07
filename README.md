@@ -2,7 +2,8 @@
 [Sciter](http://sciter.com/) bindings for Delphi
 
 ## Supported versions
-Delphi 7 or newer, 32 and 64-bit platforms 
+Delphi 7 or newer, 32 and 64-bit platforms
+
 Sciter 4.0.0.1
 
 ## Installation
