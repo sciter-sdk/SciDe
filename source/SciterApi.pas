@@ -98,15 +98,19 @@ type
     RT_DATA_CURSOR = 3,
     RT_DATA_SCRIPT = 4,
     RT_DATA_RAW    = 5,
-    SciterResourceTypeDummy = MaxInt
+    RT_DATA_FONT,
+    RT_DATA_SOUND,
+    RT_DATA_FORCE_DWORD = $ffffffff
   );
 
   SciterGFXLayer =
   (
-    GFX_LAYER_GDI      = 1,
-    GFX_LAYER_WARP     = 2,
-    GFX_LAYER_D2D      = 3,
-    GFX_LAYER_AUTO     = 65535
+    GFX_LAYER_GDI = 1,
+    GFX_LAYER_WARP = 2,
+    GFX_LAYER_D2D = 3,
+    GFX_LAYER_SKIA = 4,
+    GFX_LAYER_SKIA_OPENGL = 5,
+    GFX_LAYER_AUTO = $FFFF
   );
 
   SCITER_RT_OPTIONS { NB: UINT_PTR } = (
@@ -457,11 +461,12 @@ type
     BEHAVIOR_EVENTS_DUMMY = MAXINT // doesn't exist in sciter api, used for sizeof(uint) alignment
   );
 
-  EVENT_REASON =
+  CLICK_REASON =
   (
     BY_MOUSE_CLICK,
     BY_KEY_CLICK,
     SYNTHESIZED,
+    BY_MOUSE_ON_ICON,
     EVENT_REASON_DUMMY = MAXINT
   );
 
@@ -471,6 +476,7 @@ type
     BY_INS_CHARS,
     BY_DEL_CHAR,
     BY_DEL_CHARS,
+    BY_UNDO_REDO,
     EDIT_CHANGED_REASON_DUMMY = MAXINT
   );
 
@@ -1248,11 +1254,7 @@ var
 begin
   if FAPI = nil then
   begin
-    {$IFDEF CPUX64}
-    HSCITER := LoadLibrary(PWideChar(SCITER_DLL_DIR + 'sciter64.dll'));
-    {$ELSE}
-    HSCITER := LoadLibrary(PWideChar(SCITER_DLL_DIR + 'sciter32.dll'));
-    {$ENDIF CPUX64}
+    HSCITER := LoadLibrary(PWideChar(SCITER_DLL_DIR + 'sciter.dll'));
     if HSCITER = 0 then
       raise ESciterException.Create('Failed to load Sciter DLL.');
 

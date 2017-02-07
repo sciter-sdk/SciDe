@@ -1,16 +1,12 @@
 # SciDe
-Sciter component for Delphi
+[Sciter](http://sciter.com/) bindings for Delphi
 
-*** SUPPORTED VERSIONS AND PLATFORMS ***
-Delphi 7 or newer, 32-bit and 64-bit platform 
+## Supported versions
+Delphi 7 or newer, 32 and 64-bit platforms 
+Sciter 4.0.0.1
 
-*** ACTUAL SCITER VERSION: 3.3.2.9 ***
-
-*** INSTALLATION ***
-1. Open project group file (.bpg or .groupproj) in Delphi IDE
-2. Activate the SciDe package
-3. Click Compile (or Build), then Install. The component will be placed on the Samples tab of the Component Palette.
-4. Copy sciter32.dll and sciter64.dll to %DELPHI%\Projects\Bpl directory
-
-*** RUNTIME DEPENDENCIES ***
-Put sciter32.dll or sciter64.dll near your executable
+## Installation
+* Open project group file (.bpg or .groupproj) in Delphi IDE
+* Activate the SciDe package
+* Click Compile (or Build), then Install. The component will be placed on the Samples tab of the Component Palette.
+* Copy sciter.dll from [Sciter SDK](http://sciter.com/download/) to your exe directory (or define SCITER_DLL_DIR variable)
