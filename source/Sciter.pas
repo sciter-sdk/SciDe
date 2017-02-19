@@ -1389,11 +1389,13 @@ var
   pVal: TSciterValue;
 begin
   evt.cmd := BEHAVIOR_EVENTS(cmd);
+  API.ValueInit(@pVal);
   V2S(data, @pVal);
   evt.data := pVal;
   evt.he := he;
   evt.heTarget := he;
   API.SciterFireEvent(evt, async, bHandled);
+  API.ValueClear(@pVal);
 end;
 
 procedure TSciter.CreateParams(var Params: TCreateParams);
@@ -1526,7 +1528,7 @@ var
   pResult: OleVariant;
 begin
   API.ValueInit(@pVal);
-  if API.SciterEval(Handle, PWideChar(Script), Length(Script), pVal)  then
+  if API.SciterEval(Handle, PWideChar(Script), Length(Script), pVal) then
     S2V(@pVal, pResult)
   else
     pResult := Unassigned;
@@ -2364,9 +2366,15 @@ begin
     SetLength(pArgs, cArgs);
 
     for i := Low(Args) to High(Args) do
+    begin
+      API.ValueInit(@pArgs[i]);
       V2S(Args[i], @pArgs[i]);
+    end;
 
     SR := API.SciterCall(Handle, PAnsiChar(sFunctionName), cArgs, @pArgs[0], pVal);
+
+    for i := Low(Args) to High(Args) do
+      API.ValueClear(@pArgs[i]);
   end;
 
   if SR then
@@ -2985,11 +2993,9 @@ var
   pValue: TSciterValue;
 begin
   API.ValueInit(@pValue);
-  SciterCheck(
-    API.SciterGetValue(FElement, @pValue),
-    'Failed to get element value'
-  );
+  SciterCheck(API.SciterGetValue(FElement, @pValue), 'Failed to get element value');
   S2V(@pValue, Result);
+  API.ValueClear(@pValue);
 end;
 
 function TElement.GetVisible: boolean;
@@ -3551,10 +3557,7 @@ var
 begin
   API.ValueInit(@sValue);
   V2S(Value, @sValue);
-  SciterCheck(
-    API.SciterSetValue(FElement, @sValue),
-    'Failed to set element value.'
-  );
+  SciterCheck(API.SciterSetValue(FElement, @sValue), 'Failed to set element value.');
 end;
 
 procedure TElement.StopTimer;
@@ -3771,7 +3774,7 @@ end;
 function TElement.TryCall(const Method: WideString; const Args: array of OleVariant; out RetVal: OleVariant): Boolean;
 var
   sMethod: AnsiString;
-  sargs: array[0..255] of TSciterValue;
+  sargs: array of TSciterValue;
   sargc: UINT;
   i: Integer;
   pRetVal: TSciterValue;
@@ -3779,19 +3782,16 @@ begin
   API.ValueInit(@pRetVal);
   
   sargc := Length(Args);
-
   if sargc > 256 then
     raise ESciterException.Create('Too many arguments.');
 
-  for i := Low(sargs) to High(sargs) do
-    API.ValueInit(@sargs[i]);
+  SetLength(sargs, sargc);
 
   if sargc > 0 then
+  for i := Low(Args) to High(Args) do
   begin
-    for i := 0 to sargc - 1 do
-    begin
-      V2S(Args[i], @sargs[i]);
-    end;
+    API.ValueInit(@sargs[i]);
+    V2S(Args[i], @sargs[i]);
   end;
   sMethod := AnsiString(Method);
 
@@ -3807,6 +3807,9 @@ begin
     S2V(@pRetVal, RetVal);
     Result := True;
   end;
+
+  for i := Low(sargs) to High(sargs) do
+    API.ValueClear(@sargs[i]);
 end;
 
 procedure TElement.Update;

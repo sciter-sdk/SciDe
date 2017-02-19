@@ -576,13 +576,13 @@ type
     SciterSetMediaVars: function(hWndSciter: HWINDOW; const mediaVars: PSciterValue): BOOL; stdcall;
     SciterGetMinWidth: function(hwnd: HWINDOW): UINT; stdcall;
     SciterGetMinHeight: function(hwnd: HWINDOW; width: UINT): UINT; stdcall;
-    SciterCall: function(hWnd: HWINDOW; functionName: PAnsiChar; argc: UINT; argv: PSciterValue; var retval: TSciterValue): BOOL; stdcall;
-    SciterEval: function(hwnd: HWINDOW; script: PWideChar; scriptLength: UINT; var pretval: TSciterValue): BOOL; stdcall;
+    SciterCall: function(hWnd: HWINDOW; functionName: PAnsiChar; argc: UINT; const argv: PSciterValue; var retval: TSciterValue): BOOL; stdcall;
+    SciterEval: function(hwnd: HWINDOW; script: PWideChar; scriptLength: UINT; var retval: TSciterValue): BOOL; stdcall;
     SciterUpdateWindow: procedure(hwnd: HWINDOW); stdcall;
     SciterTranslateMessage: function(var lpMsg: TMsg): BOOL; stdcall;
     SciterSetOption: function(hwnd: HWINDOW; option: SCITER_RT_OPTIONS; value: UINT_PTR): BOOL; stdcall;
     SciterGetPPI: procedure(hWndSciter: HWINDOW; var px: UINT; var py: UINT); stdcall;
-    SciterGetViewExpando: function( hwnd: HWINDOW; pval: PSciterValue ): BOOL; stdcall;
+    SciterGetViewExpando: function( hwnd: HWINDOW; pval: PSciterValue): BOOL; stdcall;
     SciterRenderD2D: TProcPointer;
     SciterD2DFactory: TProcPointer;
     SciterDWFactory: TProcPointer;
@@ -663,8 +663,8 @@ type
     SciterSortElements: TProcPointer;
     SciterSwapElements: function( he1: HELEMENT; he2: HELEMENT ): SCDOM_RESULT; stdcall;
     SciterTraverseUIEvent: function( evt: UINT; eventCtlStruct: LPVOID ; var bOutProcessed: BOOL): SCDOM_RESULT; stdcall;
-    SciterCallScriptingMethod: function(he: HELEMENT; name: PAnsiChar; argv: PSciterValue; argc: UINT; var retval: TSciterValue): SCDOM_RESULT; stdcall;
-    SciterCallScriptingFunction: function(he: HELEMENT; name: PAnsiChar; argv: PSciterValue; argc: UINT; var retval: TSciterValue): SCDOM_RESULT; stdcall;
+    SciterCallScriptingMethod: function(he: HELEMENT; name: PAnsiChar; const argv: PSciterValue; argc: UINT; var retval: TSciterValue): SCDOM_RESULT; stdcall;
+    SciterCallScriptingFunction: function(he: HELEMENT; name: PAnsiChar; const argv: PSciterValue; argc: UINT; var retval: TSciterValue): SCDOM_RESULT; stdcall;
     SciterEvalElementScript: function(he: HELEMENT; script: PWideChar; scriptLength: UINT; var retval: TSciterValueType): SCDOM_RESULT; stdcall;
     SciterAttachHwndToElement: function(he: HELEMENT; hwnd: HWINDOW): SCDOM_RESULT; stdcall;
     SciterControlGetType: TProcPointer;
@@ -1288,7 +1288,6 @@ var
   oArrItem: OleVariant;
   j: Integer;
 begin
-  API.ValueInit(@sArrItem);
   if API.ValueType(Value, pType, pUnits) <> HV_OK then
     raise ESciterException.Create('Unknown Sciter value type.');
   case pType of
@@ -1299,8 +1298,10 @@ begin
         for j := 0 to arrSize - 1 do
         begin
           oArrItem := Unassigned;
+          API.ValueInit(@sArrItem);
           API.ValueNthElementValue(Value, j, @sArrItem);
           S2V(@sArrItem, oArrItem);
+          API.ValueClear(@sArrItem);
           VarArrayPut(Variant(OleValue), oArrItem, [j]);
         end;
         Result := HV_OK;
@@ -1444,7 +1445,6 @@ var
   oArrItem: Variant;
   sArrItem: TSciterValue;
 begin
-  API.ValueInit(SciterValue);
   vt := VarType(Value);
 
   if (vt and varArray) = varArray then
@@ -1452,6 +1452,7 @@ begin
     for i := VarArrayLowBound(Value, 1) to VarArrayHighBound(Value, 1) do
     begin
       oArrItem := VarArrayGet(Value, [i]);
+      API.ValueInit(@sArrItem);
       V2S(oArrItem, @sArrItem);
       API.ValueNthElementValueSet(SciterValue, i, @sArrItem);
     end;
@@ -1492,9 +1493,7 @@ begin
     varInteger,
     varWord,
     varLongWord:
-      begin
-        Result := API.ValueIntDataSet(SciterValue, Integer(Value), T_INT, 0);
-      end;
+      Result := API.ValueIntDataSet(SciterValue, Integer(Value), T_INT, 0);
     varInt64:
       begin
         i64 := Value;
@@ -1502,9 +1501,7 @@ begin
       end;
     varSingle,
     varDouble:
-      begin
-        Result := API.ValueFloatDataSet(SciterValue, Double(Value), T_FLOAT, 0);
-      end;
+      Result := API.ValueFloatDataSet(SciterValue, Double(Value), T_FLOAT, 0);
     varCurrency:
       begin
         cCur := Value;
@@ -1527,9 +1524,7 @@ begin
         Result := API.ValueBinaryDataSet(SciterValue, PByte(pDisp), 1, T_OBJECT, 0);
       end;
     else
-      begin
-        raise ESciterNotImplementedException.CreateFmt('Cannot convert VARIANT of type %d to Sciter value.', [vt]);
-      end;
+      raise ESciterNotImplementedException.CreateFmt('Cannot convert VARIANT of type %d to Sciter value.', [vt]);
   end;
 end;
 
@@ -1541,6 +1536,7 @@ begin
   API.ValueInit(@sValue);
   API.Sciter_T2S(vm, Value, sValue, False);
   S2V(@sValue, Result);
+  API.ValueClear(@sValue);
 end;
 
 { Variant to tiscript value conversion }
@@ -1553,6 +1549,7 @@ begin
   V2S(Value, @sValue);
   API.Sciter_S2T(vm, @sValue, tResult);
   Result := tResult;
+  API.ValueClear(@sValue);
 end;
 
 { ESciterNullPointerException }
