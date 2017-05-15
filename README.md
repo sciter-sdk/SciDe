@@ -4,7 +4,7 @@
 ## Supported versions
 Delphi 7 or newer, 32 and 64-bit platforms
 
-Sciter 4.0.0.1
+Sciter 4.0.0.7
 
 ## Installation
 * Open project group file (.bpg or .groupproj) in Delphi IDE

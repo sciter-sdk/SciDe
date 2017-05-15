@@ -6,7 +6,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, SciterApi, TiScriptApi, Sciter, StdCtrls, OleCtrls,
   ExtCtrls, ComCtrls, Menus, ComObj, ActiveX, SciDeDemo_TLB,
-  ComServ, AppEvnts, ToolWin, ImgList, ActnList, ShellAPI;
+  ComServ, AppEvnts, ToolWin, ImgList, ActnList, ShellAPI, System.Actions, System.ImageList;
 
 type
   TMainForm = class(TForm)
@@ -62,11 +62,11 @@ type
         TElementOnControlEventArgs);
     procedure Sciter1EventHandlers0Mouse(ASender: TObject; const Args:
         TElementOnMouseEventArgs);
-    procedure Sciter1LoadData(ASender: TObject; const url: WideString; resType:
-        SciterResourceType; requestId: Integer; out discard: Boolean);
     procedure Sciter1Message(ASender: TObject; const Args: TSciterOnMessageEventArgs);
     procedure Sciter1ScriptingCall(ASender: TObject; const Args:
         TElementOnScriptingCallArgs);
+    procedure Sciter1LoadData(ASender: TObject; const url: WideString; resType: SciterResourceType; requestId: Pointer;
+      out discard, delay: Boolean);
   private
     FButton: TButton;
     FTxtEvents: IElementEvents;
@@ -146,7 +146,7 @@ procedure TMainForm.FormCreate(Sender: TObject);
 var
   nf: TNativeForm;
   pTest: ITest;
-  pXml: OleVariant;
+  pXml: Variant;
   i: Integer;
   sUrl: WideString;
 begin
@@ -469,8 +469,8 @@ begin
   sbr.SimpleText := Format('Mouse event at %d:%d', [Args.X, Args.Y]);
 end;
 
-procedure TMainForm.Sciter1LoadData(ASender: TObject; const url: WideString;
-    resType: SciterResourceType; requestId: Integer; out discard: Boolean);
+procedure TMainForm.Sciter1LoadData(ASender: TObject; const url: WideString; resType: SciterResourceType;
+  requestId: Pointer; out discard, delay: Boolean);
 var
   sFileName: AnsiString;
   pMemStm: TMemoryStream;
@@ -551,7 +551,7 @@ end;
 
 function CreateObjectNative(vm: HVM): tiscript_value; cdecl;
 var
-  oVal: OleVariant;
+  oVal: Variant;
   tProgId: tiscript_value;
   pProgId: PWideChar;
   iCnt: UINT;

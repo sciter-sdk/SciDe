@@ -20,9 +20,9 @@ type
     procedure DoBehaviorDetach(const Args: TElementOnBehaviorEventArgs); override;
     procedure DoControlEvents(const Args: TElementOnControlEventArgs); override;
     function GetText: WideString; override;
-    function GetValue: OleVariant; override;
+    function GetValue: Variant; override;
     procedure SetText(const Value: WideString); override;
-    procedure SetValue(Value: OleVariant); override;
+    procedure SetValue(Value: Variant); override;
   public
     destructor Destroy; override;
     class function BehaviorName: AnsiString; override;
@@ -107,15 +107,15 @@ begin
   Result := FBodyIndex.Text;
 end;
 
-function TDemoBehavior.GetValue: OleVariant;
+function TDemoBehavior.GetValue: Variant;
 begin
   Result := FBodyIndex.Value;
 end;
 
 procedure TDemoBehavior.RecalcBMI;
 var
-  w: OleVariant;
-  h: OleVariant;
+  w: Variant;
+  h: Variant;
 begin
   try
     w := FWeight.Value;
@@ -137,7 +137,7 @@ procedure TDemoBehavior.SetText(const Value: WideString);
 begin
 end;
 
-procedure TDemoBehavior.SetValue(Value: OleVariant);
+procedure TDemoBehavior.SetValue(Value: Variant);
 begin
 end;
 
@@ -248,7 +248,7 @@ begin
 end;
 
 initialization
-  
+
   SciterRegisterBehavior(TDemoBehavior);
   SciterRegisterBehavior(TEventFilterBehavior);
   SciterRegisterBehavior(TFlashBehavior);

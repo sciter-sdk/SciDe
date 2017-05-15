@@ -3,4 +3,5 @@
 *.rsm
 *.drc
 *.dproj.local
+*.groupproj.local
 *.mes
