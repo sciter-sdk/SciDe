@@ -1,1 +1,1 @@
-[Sciter](https://github.com/Mikanoshi/SciDe) moved
+[Moved](https://github.com/Mikanoshi/SciDe)
